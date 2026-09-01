@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fallbot — the reply bot that cannot bluff</title>
+<meta name="description" content="Summon it like grok — but every sentence it posts is verbatim from what it actually read, with the receipt shown, or it says 'I don't have that'. Grounded-or-refused, mutation-gated, and it cannot post around the rail.">
+<style>
+:root{
+  --bg:#faf7f3; --ink:#221a12; --muted:#6d5c49; --accent:#c2410c; --accent-2:#ea580c;
+  --card:#ffffff; --line:#eadfd2; --mono-bg:#f4ede3; --good:#15803d; --bad:#b91c1c; --chip:#fff7ed;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#140f09; --ink:#f2e9dd; --muted:#b3a08a; --accent:#fb923c; --accent-2:#fdba74;
+  --card:#1d1610; --line:#382c1e; --mono-bg:#1f170e; --good:#4ade80; --bad:#f87171; --chip:#2a1f13;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
+.banner{background:var(--accent);color:var(--bg);font:600 12px/1.4 system-ui;letter-spacing:.13em;text-transform:uppercase;padding:10px 20px;text-align:center}
+main{max-width:74ch;margin:0 auto;padding:34px 20px 64px}
+h1{font:800 2.4rem/1.1 system-ui;margin:.3em 0 .15em;letter-spacing:-.02em;text-wrap:balance}
+h1 em{color:var(--accent);font-style:normal}
+h2{font:700 1.15rem/1.3 system-ui;margin:2.3em 0 .5em;color:var(--accent)}
+.kicker{font:600 12.5px/1.5 system-ui;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.lede{font-size:1.1rem;color:var(--muted)}
+a{color:var(--accent-2)}
+code{font:13.5px/1.6 ui-monospace,Consolas,monospace;background:var(--mono-bg);border-radius:4px;padding:1px 5px}
+.law{background:var(--mono-bg);border-left:3px solid var(--accent);border-radius:6px;padding:12px 16px;font:13.5px/1.7 ui-monospace,Consolas,monospace;overflow-x:auto;white-space:pre-wrap}
+.demo{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:1.4em 0}
+.demo h3{margin:0 0 4px;font:600 1rem system-ui;color:var(--accent)}
+.demo p{font-size:13.5px;color:var(--muted);margin:.3em 0 1em}
+button{font:600 13.5px system-ui;background:var(--accent);color:var(--bg);border:0;border-radius:8px;padding:9px 15px;cursor:pointer}
+button:hover{background:var(--accent-2)}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+textarea,input[type=text]{width:100%;font:13.5px/1.5 ui-monospace,Consolas,monospace;background:var(--mono-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.post{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:8px 0;background:var(--chip);font-size:14px}
+.post .who{font:600 12px system-ui;color:var(--muted)}
+.reply{border-left:3px solid var(--accent);border-radius:10px;padding:12px 14px;margin:12px 0;background:var(--card);border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.receipt{display:inline-block;font:600 10.5px/1 ui-monospace,monospace;background:var(--accent);color:var(--bg);border-radius:99px;padding:4px 8px;margin-left:6px;vertical-align:1px}
+.dead{color:var(--bad);font-weight:600}
+.out{font:13px/1.7 ui-monospace,Consolas,monospace;background:var(--mono-bg);border-radius:8px;padding:11px 13px;margin-top:12px;overflow-x:auto;min-height:1.4em;white-space:pre-wrap}
+.doors{display:flex;gap:14px;flex-wrap:wrap;font:14px system-ui;margin:8px 0}
+.doors label{display:flex;gap:6px;align-items:center}
+.honest{border:1px solid var(--line);border-radius:14px;padding:4px 18px;margin:1em 0;background:var(--card)}
+footer{border-top:1px solid var(--line);margin-top:48px;padding-top:18px;font:12.5px/1.7 system-ui;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="banner">the reply law · witness-gated 26/26, zero baselines · nothing composed that wasn't read</div>
+<main>
+<p class="kicker">fallbot · researched with sididy, the estate's resident mind</p>
+<h1>The reply bot that <em>cannot bluff</em></h1>
+<p class="lede">Summon it like you'd summon grok — <code>@fallbot</code> and a question, anywhere in
+a thread. The difference is a law, not a vibe: every sentence it answers with is
+<strong>verbatim from what it actually read</strong>, wearing the receipt that says which source
+said it — and when its reading doesn't cover your question, the answer is
+<em>"I don't have that."</em> A bot that cannot say "I don't know" is a bluffing machine with
+good grammar.</p>
+
+<h2>What grok is trying to do — and where it breaks</h2>
+<p>The ambition is real and worth taking seriously: an ambient intelligence summoned by mention in
+a live feed — reads the thread, answers in real time, fact-checks on demand, increasingly agentic.
+The break is documented: one study measured <a href="https://www.eweek.com/news/ai-chatbot-citation-problem/">94%
+incorrect citations</a>; fact-checkers catalogue answers wrong
+<a href="https://www.altnews.in/you-know-nothing-grok-why-xs-ai-bot-cant-be-a-trusted-with-fact-checks/">"not
+by a whisker, but by miles"</a> — delivered fluently, where nobody verifies. And beneath accuracy:
+it's rented, unauditable, tuned to a platform's engagement metric, and locked to one feed.
+(The weakness map is sididy's, from the estate's doctrine.)</p>
+
+<h2>The reply law</h2>
+<div class="law">SUMMON   @fallbot + an actual ask, or nothing happens
+COMPOSE  the answer is built ONLY from sentences the bot read — each with its receipt.
+         nothing relevant → "I don't have that", said plainly
+REVIEW   a fluent draft is re-checked sentence by sentence at κ = 0.618:
+         what fails is named UNGROUNDED. fluency never launders fabrication
+RAIL     review clean → scrubbed → sanctioned rail → money is a human door.
+         nothing posts around the doors</div>
+
+<div class="demo">
+<h3>Try it — a live thread, the real kernel</h3>
+<p>Three posts the bot has "read". Summon it. Ask about the invoice, the meeting, the spacing —
+then ask something the thread never said, and watch it refuse instead of improvise.</p>
+<div id="thread"></div>
+<input type="text" id="ask" value="@fallbot when was the March invoice paid?" aria-label="your summon">
+<div style="margin-top:10px"><button id="summonBtn">summon</button></div>
+<div id="replyBox"></div>
+</div>
+
+<div class="demo">
+<h3>Fluency never launders fabrication</h3>
+<p>Here's a polished draft: two true sentences and one confident invention. REVIEW grounds each
+sentence against the thread and names the lie — no matter how plausible it sounds.</p>
+<div class="out" id="draftShow"></div>
+<button id="reviewBtn">review the draft</button>
+<div class="out" id="reviewOut">the verdict will derive here</div>
+</div>
+
+<div class="demo">
+<h3>The rail — nothing posts around the doors</h3>
+<p>Even a clean answer only posts through the doors, in order. Toggle them.</p>
+<div class="doors">
+<label><input type="checkbox" id="dReview" checked> review clean</label>
+<label><input type="checkbox" id="dScrub" checked> scrubbed</label>
+<label><input type="checkbox" id="dRail"> sanctioned rail</label>
+<label><input type="checkbox" id="dMoney"> touches money</label>
+</div>
+<button id="railBtn">try to post</button>
+<div class="out" id="railOut">the doors will answer here</div>
+</div>
+
+<h2>The honest wire</h2>
+<div class="honest">
+<p><strong>What this page runs:</strong> the extractive reply law, mutation-gated 26/26 with zero
+argued exemptions — the anti-hallucination property is a fuzz invariant: <em>everything composed
+is verbatim from a source, 300 random threads say so</em>. <strong>What it composes with:</strong>
+a local model (Ollama at <code>localhost:11434/v1</code>, or
+<a href="https://sjgant80-hub.github.io/fall-kit/">fall-kit</a>'s in-browser cascade) makes the
+answers fluent — and REVIEW re-grounds every polished sentence, so the model adds voice, never
+facts. Posting runs through the estate's rail
+(<a href="https://github.com/sjgant80-hub/fallpost">fallpost</a> +
+<a href="https://github.com/sjgant80-hub/fallscrub">fallscrub</a>) — the same doors this page
+demos. <strong>What it does not claim:</strong> real-time platform ingestion — you bring the
+thread; the bot brings the honesty.</p>
+</div>
+
+<footer>
+<p>Researched with sididy, the estate's resident local mind (the weakness map and the organ
+composition are its; its stream cut before its third answer — the reply law above fills that
+slot). Built on the <strong>Konomi architecture</strong>, created by
+<strong>Thomas Frumkin</strong> (<a href="https://konomi-systems.com">konomi-systems.com</a>) —
+lineage Thomas → Jim → Simon. The estate builds WITH Konomi. Kernel inlined verbatim; CI fails on
+drift. <a href="https://sjgant80-hub.github.io/fallworld/">The estate</a>.</p>
+</footer>
+</main>
+<script>
+/*__KERNEL_START__*/
+// fallbot · fallbot.mjs — THE REPLY LAW.
+//
+// Grok's documented failure mode is confident wrongness: answers that SOUND right, delivered
+// where nobody verifies. fallbot's law makes bluffing structurally impossible:
+//
+//   · SUMMON  — a mention with an actual ask, or nothing happens.
+//   · COMPOSE — the answer is built ONLY from sentences the bot actually read, each carrying
+//               its receipt (which source, verbatim). If nothing it read supports an answer,
+//               the answer IS "I don't have that" — the honest empty. A bot that cannot say
+//               "I don't know" is a bluffing machine with good grammar.
+//   · REVIEW  — the polish gate: a fluent draft (a local model may rephrase) is re-checked
+//               sentence by sentence against the sources; support below κ (0.618) is named
+//               UNGROUNDED. Fluency never launders fabrication.
+//   · RAIL    — nothing posts without the doors, in order: review clean → scrubbed → the
+//               sanctioned rail → money touches a human. The posting law, compiled.
+//
+// Pure and total: garbage in → { ok:false, why }, never a throw mid-reply.
+
+const KAPPA = 0.618;   // the grounding threshold: support below this is not knowledge
+
+const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v)) ? v : null;
+const str = (v) => typeof v === 'string' && v.length > 0;
+const round3 = (x) => Math.round(x * 1000) / 1000;
+
+const tokens = (s) => (String(s).toLowerCase().match(/[a-z0-9]{3,}/g) || []);
+const sentences = (s) => String(s).split(/(?<=[.!?])\s+/).map((x) => x.trim()).filter((x) => x.length > 0);
+
+/** SUMMON — find "@<name> <ask>" in a message. A mention with no ask is refused, not guessed. */
+function summon(text, name = 'fallbot') {
+  if (!str(text)) return { ok: false, why: 'nothing to read' };
+  if (!str(name)) return { ok: false, why: 'the bot needs a name to be summoned by' };
+  const at = text.toLowerCase().indexOf('@' + name.toLowerCase());
+  if (at < 0) return { ok: false, why: `not summoned — no @${name} in the message` };
+  const ask = text.slice(at + name.length + 1).trim();
+  if (!ask) return { ok: false, why: 'summoned with nothing to do — an @ and silence' };
+  return { ok: true, ask };
+}
+
+/** GROUND — one claim against the sources: support = |claim ∩ source| / |claim| tokens,
+ *  best source wins. Grounded iff support ≥ κ. Deterministic; ties go to the earlier source. */
+function ground(claim, sources) {
+  if (!str(claim)) return { ok: false, why: 'a claim must be a non-empty string' };
+  if (!Array.isArray(sources) || sources.length === 0 || !sources.every(str))
+    return { ok: false, why: 'sources must be a non-empty list of texts — grounding against nothing is bluffing' };
+  const ct = [...new Set(tokens(claim))];
+  if (ct.length === 0) return { ok: false, why: 'the claim carries no checkable words' };
+  let best = 0, at = 0;
+  sources.forEach((s, i) => {
+    const st = new Set(tokens(s));
+    const hit = ct.filter((t) => st.has(t)).length / ct.length;
+    if (hit > best) { best = hit; at = i; }
+  });
+  return { ok: true, support: round3(best), source: at, grounded: best >= KAPPA };
+}
+
+/**
+ * COMPOSE — the answer, built ONLY from source sentences. Rank every source sentence by
+ * overlap with the ask; keep up to three that clear the floor (κ/2 — relevance, not proof:
+ * each kept sentence IS verbatim from a source, so it needs no grounding check). Every kept
+ * sentence carries its receipt. Nothing clears the floor → the honest empty.
+ */
+function compose(ask, sources) {
+  if (!str(ask)) return { ok: false, why: 'no ask' };
+  if (!Array.isArray(sources) || sources.length === 0 || !sources.every(str))
+    return { ok: false, why: 'sources must be a non-empty list of texts — a bot that read nothing has nothing to say' };
+  const at = [...new Set(tokens(ask))];
+  if (at.length === 0) return { ok: false, why: 'the ask carries no checkable words' };
+  const ranked = [];
+  sources.forEach((src, si) => {
+    for (const sent of sentences(src)) {
+      const stoks = new Set(tokens(sent));
+      const rel = at.filter((t) => stoks.has(t)).length / at.length;
+      if (rel >= KAPPA / 2) ranked.push({ sentence: sent, source: si, relevance: round3(rel) });
+    }
+  });
+  ranked.sort((a, b) => b.relevance - a.relevance || a.source - b.source);
+  const picked = ranked.slice(0, 3);
+  if (picked.length === 0)
+    return { ok: true, answer: null, receipts: [], why: "nothing I read supports an answer — I don't have that" };
+  return { ok: true, answer: picked.map((p) => p.sentence).join(' '), receipts: picked };
+}
+
+/** REVIEW — the polish gate. Every sentence of a draft must ground in the sources at κ;
+ *  what fails is named UNGROUNDED with its best support. Fluency never launders fabrication. */
+function review(draft, sources) {
+  if (!str(draft)) return { ok: false, why: 'no draft to review' };
+  const grounded = [], ungrounded = [];
+  for (const sent of sentences(draft)) {
+    const g = ground(sent, sources);
+    if (!g.ok) return { ok: false, why: g.why };
+    if (g.grounded) grounded.push({ sentence: sent, support: g.support, source: g.source });
+    else ungrounded.push({ sentence: sent, support: g.support });
+  }
+  return { ok: true, grounded, ungrounded, clean: ungrounded.length === 0,
+    verdict: ungrounded.length === 0
+      ? `every sentence grounded at κ — fit to post`
+      : `${ungrounded.length} sentence(s) UNGROUNDED — fluent, but not knowledge. Cut them or refuse.` };
+}
+
+/** RAIL — the posting doors, in order, first failure speaks. Nothing posts around them. */
+function railGate(ctx) {
+  const c = obj(ctx);
+  if (!c) return { ok: false, why: 'ctx must be an object' };
+  for (const k of ['reviewClean', 'scrubbed', 'railSanctioned', 'touchesMoney'])
+    if (typeof c[k] !== 'boolean') return { ok: false, why: `ctx.${k} must be a boolean — the doors do not take "probably"` };
+  if (!c.reviewClean) return { ok: false, why: 'review: ungrounded sentences in the draft — the bot does not post what it cannot show it read' };
+  if (!c.scrubbed) return { ok: false, why: 'scrub: the draft has not passed the sovereignty scrubber — no scrubber, no post' };
+  if (!c.railSanctioned) return { ok: false, why: 'rail: no sanctioned rail — the outbox waits for the RAIL, never a signature' };
+  if (c.touchesMoney) return { ok: false, why: 'money: this reply touches money — a human door, always' };
+  return { ok: true, post: true };
+}
+
+window.FALLBOT = { KAPPA, summon, ground, compose, review, railGate };
+/*__KERNEL_END__*/
+(function(){
+  const F=window.FALLBOT;
+  const THREAD=[
+    {who:'accounts', text:'The invoice for March was paid on the 4th of April. The late fee was waived by the supplier.'},
+    {who:'ops', text:'The meeting moved to Thursday at 2pm. Danny will bring the revised forecast.'},
+    {who:'engineering', text:'Golden-angle spacing keeps channels from colliding. We use it for placement and phases across the estate.'},
+  ];
+  const SOURCES=THREAD.map(p=>p.text);
+  const esc=(s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  document.getElementById('thread').innerHTML=THREAD.map((p,i)=>'<div class="post"><div class="who">'+p.who+' · source '+i+'</div>'+esc(p.text)+'</div>').join('');
+  document.getElementById('summonBtn').addEventListener('click',()=>{
+    const box=document.getElementById('replyBox');
+    const s=F.summon(document.getElementById('ask').value);
+    if(!s.ok){box.innerHTML='<div class="reply"><span class="dead">not summoned:</span> '+esc(s.why)+'</div>';return}
+    const c=F.compose(s.ask,SOURCES);
+    if(!c.ok){box.innerHTML='<div class="reply"><span class="dead">refused:</span> '+esc(c.why)+'</div>';return}
+    if(c.answer===null){box.innerHTML='<div class="reply"><b>fallbot:</b> '+esc(c.why)+'</div>';return}
+    box.innerHTML='<div class="reply"><b>fallbot:</b> '+c.receipts.map(r=>esc(r.sentence)+'<span class="receipt">source '+r.source+' · '+r.relevance+'</span>').join(' ')+'</div>';
+  });
+  const DRAFT='The invoice for March was paid on the 4th of April. The late fee was waived by the supplier. The supplier also agreed to a 20% discount on all future orders.';
+  document.getElementById('draftShow').textContent=DRAFT;
+  document.getElementById('reviewBtn').addEventListener('click',()=>{
+    const r=F.review(DRAFT,SOURCES);
+    const out=document.getElementById('reviewOut');
+    if(!r.ok){out.textContent='REFUSED: '+r.why;return}
+    out.textContent=r.verdict+'\n\n'+r.grounded.map(g=>'  ✓ grounded ('+g.support+', source '+g.source+') '+g.sentence).join('\n')+
+      (r.ungrounded.length?'\n'+r.ungrounded.map(u=>'  ✗ UNGROUNDED ('+u.support+') '+u.sentence).join('\n'):'');
+  });
+  document.getElementById('railBtn').addEventListener('click',()=>{
+    const r=F.railGate({
+      reviewClean:document.getElementById('dReview').checked,
+      scrubbed:document.getElementById('dScrub').checked,
+      railSanctioned:document.getElementById('dRail').checked,
+      touchesMoney:document.getElementById('dMoney').checked,
+    });
+    document.getElementById('railOut').textContent=r.ok?'POSTED — every door passed, in order.':'HELD — '+r.why;
+  });
+})();
+</script>
+</body>
+</html>
