@@ -37,6 +37,26 @@ their number, not your goal) · **platform-locked** (one feed) · **hallucinates
   ([fallscrub](https://github.com/sjgant80-hub/fallscrub)) → the sanctioned rail
   ([fallpost](https://github.com/sjgant80-hub/fallpost)) → money is a human door, always.
 
+## The appetite — LIFE, as named by the twelve-powers court
+
+[`appetite.mjs`](appetite.mjs) — witness-gated **29/29, zero exemptions**. The completeness
+court marked fallbot's one real gap LIFE: it refused honestly but never grew. Now every honest
+empty **feeds a want-list**: rephrasings share one hunger (a want is keyed by its checkable
+tokens), the most-asked want leads the reading list, and a hunger ends **only when offered
+reading actually answers it** — `sate()` re-runs the compose law, and pages that don't answer
+sate nothing. Refuse → want → read → answer: the refusal is the appetite, and the bot's growth
+is proven the same way its answers are.
+
+## Why κ = 0.618 (the threshold, argued)
+
+Grounding demands a **strict majority of a claim's checkable tokens be present in one source,
+with real margin** — 0.618 sits above "half the words match" (where coincidence lives) and
+below "verbatim only" (where honest paraphrase dies). It is the estate's coupling constant
+(couple, don't merge: the draft may rephrase, the substance must be the source's), and the
+suite pins the boundary **inclusively and to the bit** — a claim at exactly 0.618 grounds,
+proven by a 309-of-500-token construction. The floor for *relevance* (κ/2) is deliberately
+half that: composing needs candidates, reviewing needs proof.
+
 ## How it composes (the estate already had the parts)
 
 [botler](https://github.com/sjgant80-hub/botler) — the sovereign conversational body ·

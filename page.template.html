@@ -47,7 +47,7 @@ footer{border-top:1px solid var(--line);margin-top:48px;padding-top:18px;font:12
 </style>
 </head>
 <body>
-<div class="banner">the reply law · witness-gated 26/26, zero baselines · nothing composed that wasn't read</div>
+<div class="banner">two laws, both witness-clean with zero baselines · 26/26 reply + 29/29 appetite · nothing composed that wasn't read</div>
 <main>
 <p class="kicker">fallbot · researched with sididy, the estate's resident mind</p>
 <h1>The reply bot that <em>cannot bluff</em></h1>
@@ -85,6 +85,17 @@ then ask something the thread never said, and watch it refuse instead of improvi
 <input type="text" id="ask" value="@fallbot when was the March invoice paid?" aria-label="your summon">
 <div style="margin-top:10px"><button id="summonBtn">summon</button></div>
 <div id="replyBox"></div>
+</div>
+
+<div class="demo">
+<h3>The appetite — refusal becomes the reading list</h3>
+<p>Every "I don't have that" above feeds a want-list (kept in this browser). Rephrasings share
+one hunger; the most-asked leads. Offer it reading — the hunger ends <em>only</em> if the pages
+actually answer it. Refuse → want → read → answer: the loop that makes the bot grow.</p>
+<div class="out" id="wantsOut">no hungers yet — ask the bot something the thread doesn't cover</div>
+<input type="text" id="feedSrc" placeholder="paste a paragraph that might answer the hungriest want" aria-label="reading to offer">
+<div style="margin-top:10px"><button id="sateBtn">offer the reading</button></div>
+<div class="out" id="sateOut" hidden></div>
 </div>
 
 <div class="demo">
@@ -146,14 +157,44 @@ drift. <a href="https://sjgant80-hub.github.io/fallworld/">The estate</a>.</p>
   const SOURCES=THREAD.map(p=>p.text);
   const esc=(s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   document.getElementById('thread').innerHTML=THREAD.map((p,i)=>'<div class="post"><div class="who">'+p.who+' · source '+i+'</div>'+esc(p.text)+'</div>').join('');
+  // THE APPETITE — the want-list, device-local like everything else here
+  const A=window.APPETITE;
+  let WANTS=[];
+  try{WANTS=JSON.parse(localStorage.getItem('fallbot.appetite.v1')||'[]')}catch{}
+  const drawWants=()=>{
+    const out=document.getElementById('wantsOut');
+    if(WANTS.length===0){out.textContent='no hungers yet — ask the bot something the thread doesn’t cover';return}
+    const h=A.hungriest(WANTS);
+    out.textContent=WANTS.map(w=>'  ·'+(h.ok&&h.want.key===w.key?' ▶':'  ')+' "'+w.ask+'" — asked '+w.asked+'×').join('\n')+
+      (h.ok?'\n\n'+h.reason:'');
+  };
+  const saveWants=()=>{try{localStorage.setItem('fallbot.appetite.v1',JSON.stringify(WANTS))}catch{}};
+  drawWants();
   document.getElementById('summonBtn').addEventListener('click',()=>{
     const box=document.getElementById('replyBox');
     const s=F.summon(document.getElementById('ask').value);
     if(!s.ok){box.innerHTML='<div class="reply"><span class="dead">not summoned:</span> '+esc(s.why)+'</div>';return}
     const c=F.compose(s.ask,SOURCES);
     if(!c.ok){box.innerHTML='<div class="reply"><span class="dead">refused:</span> '+esc(c.why)+'</div>';return}
-    if(c.answer===null){box.innerHTML='<div class="reply"><b>fallbot:</b> '+esc(c.why)+'</div>';return}
+    if(c.answer===null){
+      box.innerHTML='<div class="reply"><b>fallbot:</b> '+esc(c.why)+' <span class="receipt">→ the want-list</span></div>';
+      const f=A.feed(WANTS,s.ask);
+      if(f.ok){WANTS=f.list;saveWants();drawWants();}
+      return;
+    }
     box.innerHTML='<div class="reply"><b>fallbot:</b> '+c.receipts.map(r=>esc(r.sentence)+'<span class="receipt">source '+r.source+' · '+r.relevance+'</span>').join(' ')+'</div>';
+  });
+  document.getElementById('sateBtn').addEventListener('click',()=>{
+    const out=document.getElementById('sateOut');out.hidden=false;
+    const h=A.hungriest(WANTS);
+    if(!h.ok){out.textContent=h.why;return}
+    const reading=document.getElementById('feedSrc').value;
+    if(!reading.trim()){out.textContent='offer an actual paragraph — hunger is not sated by an empty plate';return}
+    const r=A.sate(WANTS,h.want.key,[reading]);
+    if(!r.ok){out.textContent='THE HUNGER STAYS — '+r.why;return}
+    WANTS=r.list;saveWants();drawWants();
+    document.getElementById('feedSrc').value='';
+    out.textContent='HUNGER ENDED — the reading answered it:\n"'+r.answer+'"\n(receipt: the paragraph you just offered)';
   });
   const DRAFT='The invoice for March was paid on the 4th of April. The late fee was waived by the supplier. The supplier also agreed to a 20% discount on all future orders.';
   document.getElementById('draftShow').textContent=DRAFT;

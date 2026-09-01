@@ -1,22 +1,29 @@
-// build-page.mjs — inline the gated kernel into index.html VERBATIM, between the markers.
-// CI diffs the rebuild so the live page cannot drift from the proven law. Fixpoint by construction.
-// The kernel file and its export list are DERIVED, never typed: the one-kernel rule.
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+// build-page.mjs — inline BOTH gated kernels into index.html VERBATIM, dependency order:
+// fallbot.mjs (the reply law) then appetite.mjs (the LIFE law, which imports compose from it —
+// the import line is stripped because both live in one script scope on the page).
+// CI diffs the rebuild so the live page cannot drift from the proven laws. Fixpoint by construction.
+import { readFileSync, writeFileSync } from 'node:fs';
 
-const kernelFile = readdirSync('.').find((f) => f.endsWith('.mjs') && !f.includes('.test.') && f !== 'build-page.mjs');
-if (!kernelFile) { console.error('REFUSED: no kernel found'); process.exit(1); }
-const src = readFileSync(kernelFile, 'utf8');
-const exports = [...src.matchAll(/^export (?:function|const) ([A-Za-z0-9_]+)/gm)].map((m) => m[1]);
-if (exports.length === 0) { console.error('REFUSED: the kernel exports nothing'); process.exit(1); }
-const NS = kernelFile.replace('.mjs', '').toUpperCase();
-
-let kernel = src.replace(/^export /gm, '').replace(/<\/script/g, '<\\/script');
+// ⚑ EACH KERNEL GETS ITS OWN SCOPE — both declare `const str`/`tokens`, and concatenating
+// them flat is a redeclaration error that takes the whole page down at parse time. Each is
+// wrapped in an IIFE; only its exports reach window. appetite's import of compose is stripped
+// and resolved from window.FALLBOT, which is why dependency order matters.
+const KERNELS = [['fallbot.mjs', 'FALLBOT'], ['appetite.mjs', 'APPETITE']];
+const blocks = [];
+for (const [file, NS] of KERNELS) {
+  const src = readFileSync(file, 'utf8');
+  const exports = [...src.matchAll(/^export (?:function|const) ([A-Za-z0-9_]+)/gm)].map((m) => m[1]);
+  if (exports.length === 0) { console.error('REFUSED: ' + file + ' exports nothing'); process.exit(1); }
+  const body = src
+    .replace(/^import\s*\{([^}]*)\}\s*from[^\n]*\n/gm, (_, names) => 'const {' + names + '} = window.FALLBOT;\n')
+    .replace(/^export /gm, '').replace(/<\/script/g, '<\\/script');
+  blocks.push('// ── ' + file + ' ──\nwindow.' + NS + ' = (() => {\n' + body + '\nreturn { ' + exports.join(', ') + ' };\n})();');
+}
 const shell = readFileSync('page.template.html', 'utf8');
 const START = '/*__KERNEL_START__*/', END = '/*__KERNEL_END__*/';
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const re = new RegExp(esc(START) + '[\\s\\S]*?' + esc(END));
-const block = START + '\n' + kernel + '\nwindow.' + NS + ' = { ' + exports.join(', ') + ' };\n' + END;
-const out = shell.replace(re, () => block);
+const block = START + '\n' + blocks.join('\n') + '\n' + END;
 if (!shell.includes(START)) { console.error('REFUSED: kernel markers not found in template'); process.exit(1); }
-writeFileSync('index.html', out);
-console.log('inlined ' + kernelFile + ' → index.html (' + kernel.length + 'b kernel, window.' + NS + ' = { ' + exports.join(', ') + ' })');
+writeFileSync('index.html', shell.replace(re, () => block));
+console.log('inlined ' + KERNELS.map(([f]) => f).join(' + ') + ' → index.html');

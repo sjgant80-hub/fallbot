@@ -8,13 +8,15 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
       - name: the reference law against its falsifiable examples
-        run: node --test fallbot.test.mjs
+        run: node --test fallbot.test.mjs appetite.test.mjs
       # ⚑ Pinned. An unpinned gate is a gate somebody else can change.
       - name: witness — try to break the law, then READ the verdict (must be CLEAN)
         run: |
           git clone --depth 1 --branch v0.6 https://github.com/sjgant80-hub/witness.git /tmp/witness
           node /tmp/witness/witness.mjs mutate fallbot.mjs             --timeout 60000 --cap 800 $([ -f witness.baseline.json ] && echo "--baseline witness.baseline.json")             --test node --test fallbot.test.mjs | tee verdict.txt
           grep -q '"clean": true' verdict.txt || { echo "::error::mutants survived — the gate is not clean"; exit 1; }
+          node /tmp/witness/witness.mjs mutate appetite.mjs \n            --timeout 60000 --cap 800 \n            --test node --test appetite.test.mjs | tee verdict2.txt
+          grep -q '"clean": true' verdict2.txt || { echo "::error::appetite mutants survived — the gate is not clean"; exit 1; }
       - name: the live page still carries the gated law (no drift)
         run: |
           cp index.html /tmp/shipped.html

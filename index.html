@@ -47,7 +47,7 @@ footer{border-top:1px solid var(--line);margin-top:48px;padding-top:18px;font:12
 </style>
 </head>
 <body>
-<div class="banner">the reply law · witness-gated 26/26, zero baselines · nothing composed that wasn't read</div>
+<div class="banner">two laws, both witness-clean with zero baselines · 26/26 reply + 29/29 appetite · nothing composed that wasn't read</div>
 <main>
 <p class="kicker">fallbot · researched with sididy, the estate's resident mind</p>
 <h1>The reply bot that <em>cannot bluff</em></h1>
@@ -85,6 +85,17 @@ then ask something the thread never said, and watch it refuse instead of improvi
 <input type="text" id="ask" value="@fallbot when was the March invoice paid?" aria-label="your summon">
 <div style="margin-top:10px"><button id="summonBtn">summon</button></div>
 <div id="replyBox"></div>
+</div>
+
+<div class="demo">
+<h3>The appetite — refusal becomes the reading list</h3>
+<p>Every "I don't have that" above feeds a want-list (kept in this browser). Rephrasings share
+one hunger; the most-asked leads. Offer it reading — the hunger ends <em>only</em> if the pages
+actually answer it. Refuse → want → read → answer: the loop that makes the bot grow.</p>
+<div class="out" id="wantsOut">no hungers yet — ask the bot something the thread doesn't cover</div>
+<input type="text" id="feedSrc" placeholder="paste a paragraph that might answer the hungriest want" aria-label="reading to offer">
+<div style="margin-top:10px"><button id="sateBtn">offer the reading</button></div>
+<div class="out" id="sateOut" hidden></div>
 </div>
 
 <div class="demo">
@@ -135,6 +146,8 @@ drift. <a href="https://sjgant80-hub.github.io/fallworld/">The estate</a>.</p>
 </main>
 <script>
 /*__KERNEL_START__*/
+// ── fallbot.mjs ──
+window.FALLBOT = (() => {
 // fallbot · fallbot.mjs — THE REPLY LAW.
 //
 // Grok's documented failure mode is confident wrongness: answers that SOUND right, delivered
@@ -247,7 +260,101 @@ function railGate(ctx) {
   return { ok: true, post: true };
 }
 
-window.FALLBOT = { KAPPA, summon, ground, compose, review, railGate };
+return { KAPPA, summon, ground, compose, review, railGate };
+})();
+// ── appetite.mjs ──
+window.APPETITE = (() => {
+// fallbot · appetite.mjs — THE APPETITE LAW (the LIFE the twelve-powers court named missing).
+//
+// Every honest empty — "nothing I read supports an answer — I don't have that" — is a signal:
+// exactly the thing the bot should read next. This law turns refusal into appetite:
+//
+//   · FEED      — an unanswered ask joins the want-list. The same want asked again (rephrased
+//                 or not — wants are keyed by their checkable tokens) GROWS instead of
+//                 duplicating: hunger has a weight.
+//   · HUNGRIEST — the one thing to go read about next: most-asked first, first-asked on ties.
+//                 An empty list is the honest answer "the bot wants nothing — it could answer
+//                 everything it was asked."
+//   · SATE      — a want leaves the list ONLY when new reading actually covers it: sate()
+//                 re-runs the compose law against the offered sources, and if the answer is
+//                 still the honest empty, the want STAYS, with the reason. Hunger is not
+//                 satisfied by the arrival of pages — only by pages that answer.
+//
+// This closes the loop: refuse → want → read → answer. The bot's ignorance is append-only
+// honest, and its learning is proven the same way its answers are.
+//
+// Pure and total: garbage in → { ok:false, why }, never a throw mid-hunger.
+
+const { compose } = window.FALLBOT;
+
+const str = (v) => typeof v === 'string' && v.length > 0;
+const tokens = (s) => (String(s).toLowerCase().match(/[a-z0-9]{3,}/g) || []);
+
+// grammar words carry no want: "the capital of Mongolia" and "capital of Mongolia" are ONE
+// hunger. Question words are NOT here on purpose — "when was X paid" and "who paid X" are
+// different wants, and flattening them would merge appetites that need different reading.
+const STOP = new Set(['the', 'and', 'was', 'were', 'are', 'has', 'had', 'have', 'this', 'that', 'with', 'for', 'its', 'does', 'did', 'will', 'you', 'your']);
+
+/** the want's identity: its sorted unique checkable tokens, grammar words dropped —
+ *  rephrasings share a hunger. */
+function keyOf(ask) {
+  if (!str(ask)) return { ok: false, why: 'no ask, no want' };
+  const t = [...new Set(tokens(ask).filter((w) => !STOP.has(w)))].sort();
+  if (t.length === 0) return { ok: false, why: 'the ask carries no checkable words — nothing to want' };
+  return { ok: true, key: t.join(' ') };
+}
+
+/** FEED — fold one honest empty into the want-list. Returns a NEW list; never mutates. */
+function feed(list, ask) {
+  if (!Array.isArray(list)) return { ok: false, why: 'the want-list must be a list' };
+  const k = keyOf(ask);
+  if (!k.ok) return k;
+  for (const w of list) {
+    if (!w || !str(w.key) || !str(w.ask) || !Number.isInteger(w.asked) || w.asked < 1)
+      return { ok: false, why: 'the want-list holds a malformed want' };
+  }
+  const i = list.findIndex((w) => w.key === k.key);
+  if (i >= 0) {
+    const grown = list.map((w, j) => j === i ? { ...w, asked: w.asked + 1 } : { ...w });
+    return { ok: true, list: grown, want: grown[i], grew: true };
+  }
+  const fresh = { key: k.key, ask, asked: 1 };
+  return { ok: true, list: [...list.map((w) => ({ ...w })), fresh], want: fresh, grew: false };
+}
+
+/** HUNGRIEST — what to read about next: most-asked, ties to the earliest want. */
+function hungriest(list) {
+  if (!Array.isArray(list)) return { ok: false, why: 'the want-list must be a list' };
+  if (list.length === 0) return { ok: false, why: 'the bot wants nothing — it could answer everything it was asked' };
+  let best = null, at = -1;
+  list.forEach((w, i) => {
+    if (!w || !str(w.key) || !Number.isInteger(w.asked)) { best = undefined; return; }
+    if (best === undefined) return;
+    if (!best || w.asked > best.asked) { best = w; at = i; }
+  });
+  if (best === undefined || best === null) return { ok: false, why: 'the want-list holds a malformed want' };
+  return { ok: true, want: best, index: at,
+    reason: `"${best.ask}" — asked ${best.asked} time(s)${best.asked > 1 ? ', the heaviest hunger' : ''}; go read about it` };
+}
+
+/**
+ * SATE — offer new reading against one want. The want leaves the list ONLY if compose() can
+ * now actually answer it from the offered sources; otherwise it stays, and the refusal says
+ * why. Returns { list, answer, receipts } on success — the answer that ended the hunger.
+ */
+function sate(list, key, sources) {
+  if (!Array.isArray(list)) return { ok: false, why: 'the want-list must be a list' };
+  if (!str(key)) return { ok: false, why: 'which want? key required' };
+  const i = list.findIndex((w) => w && w.key === key);
+  if (i < 0) return { ok: false, why: `no want with that key — nothing was hungry for it` };
+  const c = compose(list[i].ask, sources);
+  if (!c.ok) return { ok: false, why: c.why };
+  if (c.answer === null) return { ok: false, why: 'still unread — the offered sources do not answer the want, so the hunger stays' };
+  return { ok: true, list: list.filter((_, j) => j !== i).map((w) => ({ ...w })), answer: c.answer, receipts: c.receipts };
+}
+
+return { keyOf, feed, hungriest, sate };
+})();
 /*__KERNEL_END__*/
 (function(){
   const F=window.FALLBOT;
@@ -259,14 +366,44 @@ window.FALLBOT = { KAPPA, summon, ground, compose, review, railGate };
   const SOURCES=THREAD.map(p=>p.text);
   const esc=(s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   document.getElementById('thread').innerHTML=THREAD.map((p,i)=>'<div class="post"><div class="who">'+p.who+' · source '+i+'</div>'+esc(p.text)+'</div>').join('');
+  // THE APPETITE — the want-list, device-local like everything else here
+  const A=window.APPETITE;
+  let WANTS=[];
+  try{WANTS=JSON.parse(localStorage.getItem('fallbot.appetite.v1')||'[]')}catch{}
+  const drawWants=()=>{
+    const out=document.getElementById('wantsOut');
+    if(WANTS.length===0){out.textContent='no hungers yet — ask the bot something the thread doesn’t cover';return}
+    const h=A.hungriest(WANTS);
+    out.textContent=WANTS.map(w=>'  ·'+(h.ok&&h.want.key===w.key?' ▶':'  ')+' "'+w.ask+'" — asked '+w.asked+'×').join('\n')+
+      (h.ok?'\n\n'+h.reason:'');
+  };
+  const saveWants=()=>{try{localStorage.setItem('fallbot.appetite.v1',JSON.stringify(WANTS))}catch{}};
+  drawWants();
   document.getElementById('summonBtn').addEventListener('click',()=>{
     const box=document.getElementById('replyBox');
     const s=F.summon(document.getElementById('ask').value);
     if(!s.ok){box.innerHTML='<div class="reply"><span class="dead">not summoned:</span> '+esc(s.why)+'</div>';return}
     const c=F.compose(s.ask,SOURCES);
     if(!c.ok){box.innerHTML='<div class="reply"><span class="dead">refused:</span> '+esc(c.why)+'</div>';return}
-    if(c.answer===null){box.innerHTML='<div class="reply"><b>fallbot:</b> '+esc(c.why)+'</div>';return}
+    if(c.answer===null){
+      box.innerHTML='<div class="reply"><b>fallbot:</b> '+esc(c.why)+' <span class="receipt">→ the want-list</span></div>';
+      const f=A.feed(WANTS,s.ask);
+      if(f.ok){WANTS=f.list;saveWants();drawWants();}
+      return;
+    }
     box.innerHTML='<div class="reply"><b>fallbot:</b> '+c.receipts.map(r=>esc(r.sentence)+'<span class="receipt">source '+r.source+' · '+r.relevance+'</span>').join(' ')+'</div>';
+  });
+  document.getElementById('sateBtn').addEventListener('click',()=>{
+    const out=document.getElementById('sateOut');out.hidden=false;
+    const h=A.hungriest(WANTS);
+    if(!h.ok){out.textContent=h.why;return}
+    const reading=document.getElementById('feedSrc').value;
+    if(!reading.trim()){out.textContent='offer an actual paragraph — hunger is not sated by an empty plate';return}
+    const r=A.sate(WANTS,h.want.key,[reading]);
+    if(!r.ok){out.textContent='THE HUNGER STAYS — '+r.why;return}
+    WANTS=r.list;saveWants();drawWants();
+    document.getElementById('feedSrc').value='';
+    out.textContent='HUNGER ENDED — the reading answered it:\n"'+r.answer+'"\n(receipt: the paragraph you just offered)';
   });
   const DRAFT='The invoice for March was paid on the 4th of April. The late fee was waived by the supplier. The supplier also agreed to a 20% discount on all future orders.';
   document.getElementById('draftShow').textContent=DRAFT;
